@@ -11,10 +11,10 @@ public class GameOfLife {
 	private int interval;
 	private boolean[][] initialGeneration;
 	
-	private GameOfLife(int size, int interval, int maxSteps) {
+	private GameOfLife(int interval, int maxSteps, boolean[][] initialGeneration) {
 		this.interval = interval;	
 		this.maxSteps = maxSteps;
-
+		this.initialGeneration = initialGeneration;
 	}
 
 	public static GameBuilder getBuilder() {
@@ -26,30 +26,24 @@ public class GameOfLife {
 	}
 
 	public void run() {
+		
 		for (int i = 0; i < maxSteps; i++) {
+			//TODO: Regeln anwenden
 			updateDisplays();			
 		}
 	}
 
 	private void updateDisplays() {
 		for (Display display: displays) {
-			display.refresh(new boolean[1][1]);
+			display.refresh(this.initialGeneration);
 		}
 	}
 	
 	public static class GameBuilder {
-		private Integer size;
 		private Integer interval;
 		private Integer maxSteps;
 		private boolean[][] initialGeneration = null;
 		
-		public GameBuilder withSize(int size) {
-			if (size < 1) {
-				throw new IllegalArgumentException();
-			}
-			this.size = size;
-			return this;
-		}
 		public GameBuilder withInterval(int interval) {
 			if (interval < 1) {
 				throw new IllegalArgumentException();
@@ -64,12 +58,22 @@ public class GameOfLife {
 			this.maxSteps = maxSteps;
 			return this;
 		}
+		public GameBuilder withPattern(Pattern pattern) {
+			if (pattern == null) {
+				throw new IllegalArgumentException();
+			}
+			this.initialGeneration = pattern.startGeneration();
+			return this;
+		}
 		public GameOfLife build() {
-			if (size == null || interval == null || maxSteps == null) {
+			if (interval == null || maxSteps == null) {
+				throw new IllegalStateException();
+			}
+			if (initialGeneration == null) {
 				throw new IllegalStateException();
 			}
 
-			return new GameOfLife(size, interval, maxSteps);
+			return new GameOfLife(interval, maxSteps, initialGeneration);
 		}
 	}
 }

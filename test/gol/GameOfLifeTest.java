@@ -8,11 +8,13 @@ import org.testng.annotations.Test;
 
 public class GameOfLifeTest {
 
+	private static final int SIZE = 5;
 	private static final int MAX_STEPS = 1;
 	private static final int INTERVAL = 1000;
-	private static final int SIZE = 5;
 	
 	private MockDisplay display;
+	
+	
 	
 	@BeforeMethod
 	public void init() {
@@ -31,18 +33,17 @@ public class GameOfLifeTest {
 	@DataProvider
 	public Object[][] illegalArguments() {
 		return new Object[][] {
-			{0, 1, 1},
-			{1, 0, 1},
-			{1, 1, 0},
+			{0, 1},
+			{1, 0},
 		};
 	}
 	
 	@Test(dataProvider="positiveInteger")
 	public void testOneGenerationLifecycle(int maxStep) {
 		GameOfLife game = GameOfLife.getBuilder()
-				.withSize(SIZE)
 				.withInterval(INTERVAL)
 				.withMaxSteps(maxStep)
+				.withPattern(mockSquarePattern(SIZE))
 				.build();
 		game.attach(display);
 		
@@ -52,54 +53,54 @@ public class GameOfLifeTest {
 	}
 	
 	@Test(dataProvider="illegalArguments", expectedExceptions=IllegalArgumentException.class)
-	public void constructorThrowsIllArgException(int size, int interval, int maxSteps) {
+	public void constructorThrowsIllArgException(int interval, int maxSteps) {
 		GameOfLife.getBuilder()
-				.withSize(size)
 				.withInterval(interval)
 				.withMaxSteps(maxSteps)
 				.build();
 	}
 	
 	@Test(expectedExceptions=IllegalStateException.class)
-	public void builderThrowsIllStateExceptionIfSizeNotSet() {
-		GameOfLife.getBuilder()
-			.withInterval(1000)
-			.withMaxSteps(3)
-			.build();
-	}
-	
-	@Test(expectedExceptions=IllegalStateException.class)
 	public void builderThrowsIllStateExceptionIfIntervalNotSet() {
 		GameOfLife.getBuilder()
-			.withInterval(1000)
-			.withSize(5)
+			.withMaxSteps(MAX_STEPS)
+			.withPattern(mockSquarePattern(SIZE))
 			.build();
 	}
 	
 	@Test(expectedExceptions=IllegalStateException.class)
 	public void builderThrowsIllStateExceptionIfMaxStepsNotSet() {
 		GameOfLife.getBuilder()
-			.withSize(5)
-			.withMaxSteps(3)
+			.withInterval(INTERVAL)
+			.withPattern(mockSquarePattern(SIZE))
+			.build();
+	}
+	
+	@Test(expectedExceptions=IllegalStateException.class)
+	public void builderThrowsIllStateExceptionIfNoInitialGenerationSet() {
+		GameOfLife.getBuilder()
+			.withInterval(INTERVAL)
+			.withMaxSteps(MAX_STEPS)
 			.build();
 	}
 	
 	@Test(dataProvider="positiveInteger")
 	public void generationHasExpectedSize(int size) {
 		GameOfLife game = GameOfLife.getBuilder()
-				.withSize(size)
 				.withInterval(INTERVAL)
 				.withMaxSteps(MAX_STEPS)
+				.withPattern(mockSquarePattern(size))
 				.build();
 		game.attach(display);
 		
 		game.run();
-		boolean[][] generation = display.getGeneration();
 		
+		boolean[][] generation = display.getGeneration();
 		assertEquals(generation.length, size);
 		assertEquals(generation[0].length, size);
 	}
 	
+
 	private MockDisplay mockDisplay() {
 		return new MockDisplay() { 
 			private boolean[][] generation;
@@ -116,6 +117,15 @@ public class GameOfLifeTest {
 			
 			public int getLifecycle() {
 				return lifecycle;
+			}
+		};
+	}
+	
+	private Pattern mockSquarePattern(int size) {
+		return new Pattern() {
+			@Override
+			public boolean[][] startGeneration() {
+				return new boolean[size][size];
 			}
 		};
 	}
