@@ -1,4 +1,4 @@
-package gol;
+package gol.patterns;
 
 public interface Pattern {
 
