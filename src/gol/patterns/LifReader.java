@@ -6,25 +6,50 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * A Pattern creating a generation from a .LIF 1.06 file
+ */
 public class LifReader implements Pattern {
 	
+	private static final boolean ALIVE = true;
 	private static final String COMMENT_INDICATOR = "#";
 	private static final String SEPARATOR = " ";
+	
+	private static final String COORDINATE_REGEX = "^\\d\\w+\\d$";
+	
 	private boolean[][] generation;
 
+	/**
+	 * Creates a new Pattern using the provided Path of a LIF 1.06 file and a given amount of padding cells
+	 * @param path The Path of the LIF 1.06 file
+	 * @param padding The amount of padding cell rows and lines to add around the pattern given in the file
+	 * @throws IOException Forwards all IOExceptions from the underlying File IO.
+	 */
 	public LifReader(Path path, int padding) throws IOException {
-		this.generation = readGenerationFromFile(path);
+		checkInputParameters(path, padding);
+		
+		this.generation = readGenerationFromFile(path, padding);
+	}
+	
+	@Override
+	public boolean[][] startGeneration() {
+		return generation;
 	}
 
-	private boolean[][] readGenerationFromFile(Path path) throws IOException {
+	private boolean[][] readGenerationFromFile(Path path, int padding) throws IOException {
 		List<String> lines = Files.readAllLines(path);
 		List<Coordinate> coordinates = extractCoordinates(lines);
+		
+		if (coordinates.isEmpty()) {
+			throw new IllegalArgumentException(
+					String.format("File %s contained no valid cell definitions", path.getFileName()));
+		}
 				
-		return createGenerationFromCoordinates(coordinates);
+		return createGenerationFromCoordinates(coordinates, padding);
 	}
 
-	private boolean[][] createGenerationFromCoordinates(List<Coordinate> coordinates) {
-		Coordinate maxCoordinate  = calculateMaxCoordinate(coordinates);
+	private boolean[][] createGenerationFromCoordinates(List<Coordinate> coordinates, int padding) {
+		Coordinate maxCoordinate  = calculateMaxCoordinate(coordinates, padding);
 		Coordinate minCoordinate  = calculateMinCoordinate(coordinates);
 		
 		int sizeX = maxCoordinate.getX() - minCoordinate.getX() + 1;
@@ -32,13 +57,19 @@ public class LifReader implements Pattern {
 		boolean[][] generation = new boolean[sizeX][sizeY];
 		
 		for (Coordinate coordinate : coordinates) {
-			generation[coordinate.getX() - minCoordinate.getX()][coordinate.getY() - minCoordinate.getY()] = true;
+			int normalizedPositionX = coordinate.getX() - minCoordinate.getX();
+			int normalizedPositionY = coordinate.getY() - minCoordinate.getY();
+			
+			int positionWithPaddingX = normalizedPositionX + padding;
+			int positionWithPaddingY = normalizedPositionY + padding;
+			
+			generation[positionWithPaddingX][positionWithPaddingY] = ALIVE;
 		}
 		
 		return generation;
 	}
 
-	private Coordinate calculateMaxCoordinate(List<Coordinate> coordinates) {
+	private Coordinate calculateMaxCoordinate(List<Coordinate> coordinates, int padding) {
 		int max_x = Integer.MIN_VALUE;
 		int max_y = Integer.MIN_VALUE;
 		
@@ -49,6 +80,9 @@ public class LifReader implements Pattern {
 			if (x >= max_x) { max_x = x; }
 			if (y >= max_y) { max_y = y; }
 		}
+		
+		max_x += padding * 2;
+		max_y += padding * 2;
 		
 		return new Coordinate(max_x, max_y);
 	}
@@ -76,6 +110,10 @@ public class LifReader implements Pattern {
 	}
 	
 	private Coordinate buildCoordinate(String line) {
+		if (!line.matches(COORDINATE_REGEX)) {
+			throw new IllegalArgumentException(String.format("Invalid line: '%s'", line));
+		}
+		
 		String[] coordinateStrings = line.split(SEPARATOR);
 		try {
 			int x = Integer.parseInt(coordinateStrings[0]);
@@ -86,10 +124,14 @@ public class LifReader implements Pattern {
 			throw new IllegalArgumentException(String.format("Invalid coordinate: '%s'", line));
 		}
 	}
-
-	@Override
-	public boolean[][] startGeneration() {
-		return generation;
+	
+	private void checkInputParameters(Path path, int padding) {
+		if (path == null) {
+			throw new IllegalArgumentException("Path may not be null");
+		}
+		else if (padding < 0) {
+			throw new IllegalArgumentException("Padding may not be negative");
+		}
 	}
 	
 	private static class Coordinate {
