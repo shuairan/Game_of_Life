@@ -15,7 +15,7 @@ public class LifReader implements Pattern {
 	private static final String COMMENT_INDICATOR = "#";
 	private static final String SEPARATOR = " ";
 	
-	private static final String COORDINATE_REGEX = "^\\d\\w+\\d$";
+	private static final String COORDINATE_REGEX = "-??\\d+\\s+-??\\d+";
 	
 	private boolean[][] generation;
 
